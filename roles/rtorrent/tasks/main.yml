@@ -1,0 +1,79 @@
+# --- ~ ---
+
+- name: "Install rtorrent"
+  apt:
+    pkg: rtorrent
+    state: latest
+    update_cache: yes
+    autoremove: yes
+
+# ---
+
+- name: "Create rtorrent user"
+  user:
+    name: "{{ usr }}"
+    createhome: yes
+    shell: /usr/sbin/nologin
+
+# --- ~ ---
+
+- name: "Create directories"
+  file:
+    path: "{{ home }}/{{ item }}"
+    state: directory
+    owner: "{{ usr }}"
+    group: "{{ usr }}"
+  with_items:
+    - .sessions
+    - downloaded
+    - torrents
+
+# ---
+
+- name: "Copy rtorrent.rc"
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ home }}/.{{ item }}"
+    owner: "{{ usr }}"
+    group: "{{ usr }}"
+    mode: 0644
+    force: yes
+  with_items:
+    - rtorrent.rc
+
+# ---
+
+- name: "Copy rtorrent.service and restart rtorrent.service"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - rtorrent.service
+  notify:
+    - "Restart rtorrent"
+
+# --- ~ ---
+
+- name: "Get rtorrent.service status"
+  command: "systemctl is-active {{ item }}"
+  with_items:
+    - rtorrent.service
+  register: rtorrent_active_status
+  changed_when: false
+#  failed_when: rtorrent_active_status.rc != 0
+
+# --- ~ ---
+
+- name: "Start rtorrent.service if status is not active"
+  service:
+    name: "{{ item }}"
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  with_items:
+    - rtorrent.service
+  when: rtorrent_active_status != "active"

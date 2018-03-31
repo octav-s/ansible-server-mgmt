@@ -1,0 +1,32 @@
+## --- ruTorrent WebUI
+server {
+  listen 80;
+  server_name rtp.octavians.eu;
+
+  root {{ rutorrent_path }};
+  index index.php index.html index.htm;
+  autoindex off;
+
+  access_log /var/log/nginx/access_rutorrent.log;
+  error_log /var/log/nginx/error_rutorrent.log;
+
+  auth_basic "Authenticate Yourself";
+  auth_basic_user_file auth.d/rt.pwd;
+
+  location / {
+    try_files $uri $uri/ index.php index.html index.htm =404;
+  }
+
+  location ~ [^/]\.php(/|$) {
+    fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+    if (!-f $document_root$fastcgi_script_name) {
+      return 404;
+    }
+    fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+    include param.d/fastcgi;
+    fastcgi_index index.php;
+    fastcgi_param SCRIPT_FILENAME $request_filename;
+    fastcgi_read_timeout 300;
+  }
+}
+

@@ -1,0 +1,17 @@
+# ---
+
+- name: "Restart Nginx and php-fpm"
+  become: true
+  service:
+    name: "{{ item }}"
+    daemon_reload: yes
+    state: restarted
+    enabled: yes
+  with_items:
+    - nginx.service
+    - "{{ php_fpm_service }}"
+  
+
+# ---
+
+

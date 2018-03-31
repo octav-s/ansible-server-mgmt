@@ -1,0 +1,168 @@
+# --- ~ ---
+
+- include_role:
+    name: rtorrent
+
+# --
+
+- name: "Install dependencies"
+  apt:
+    pkg: "{{ item }}"
+    update-cache: yes
+    autoremove: yes
+    state: latest
+  with_items:
+    - ffmpeg
+    - mediainfo
+    - curl
+    - unzip
+    - unrar
+    - git
+
+# ---
+
+- name: "Get ruTorrent from GIT"
+  git:
+    repo: "{{ rutorrent_repo_url }}"
+    dest: "{{ rutorrent_path }}"
+    version: "{{ rutorrent_repo_rev }}"
+    force: yes
+
+# ---
+
+- name: "Configure ruTorrent"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ rutorrent_path }}/conf/{{ item }}"
+    owner: "{{ usr }}"
+    group: "{{ usr }}"
+    mode: 0644
+    force: yes
+  with_items:
+    - config.php
+    - access.ini
+    - plugins.ini
+
+# ---
+
+- name: "Ensure rutorrent dir owner is rTorrent user"
+  file:
+    path: "{{ rutorrent_path }}"
+    owner: "{{ usr }}"
+    group: "{{ usr }}"
+    state: directory
+    recurse: yes
+
+# ---
+
+- name: "Make shared folder writable by www-data"
+  file:
+    path: "{{ rutorrent_path }}/share"
+    owner: "{{ usr }}"
+    group: "www-data"
+    state: directory
+    mode: 0775
+    recurse: yes
+
+# ---
+
+- include_role:
+    name: nginx
+
+# ---
+
+- name: "Install Nginx config"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/nginx/sites-available/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode: 0644
+    force: yes
+  with_items:
+    - rutorrent.rtp.octavians.eu
+
+# ---
+
+- name: "Create required nginx directories"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "root"
+    group: "root"
+  with_items:
+    - "/etc/nginx/auth.d/"
+
+# ---
+
+- name: "Copy htpasswd file"
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/nginx/auth.d/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode: 0644
+    force: yes
+  with_items:
+    - rutorrent.pwd
+
+# ---
+
+
+- name: "Enable Nginx vhost"
+  file:
+    src: "/etc/nginx/sites-available/{{ item }}"
+    dest: "/etc/nginx/sites-enabled/{{ item }}"
+    state: link
+    force: yes
+  with_items:
+    - rutorrent.rtp.octavians.eu
+  notify:
+    - "Restart Nginx and php-fpm"
+
+# --- ~ ---
+
+- name: "Get Nginx.service status"
+  command: "systemctl is-active {{ item }}"
+  with_items:
+    - nginx.service
+  register: nginx_active_status
+  changed_when: false
+#  failed_when: nginx_active_status.rc != 0
+
+# --- ~ ---
+
+- name: "Get php-fpm service status"
+  command: "systemctl is-active {{ item }}"
+  with_items:
+    - "{{ php_fpm_service }}"
+  register: php_fpm_active_status
+  changed_when: false
+#  failed_when: php_fpm_active_status.rc != 0
+
+# --- ~ ---
+
+- name: "Start nginx.service if status is not active"
+  service:
+    name: "{{ item }}"
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  with_items:
+    - nginx.service
+  when: nginx_active_status != "active"
+
+# --- ~ ---
+
+- name: "Start php-fpm.service if status is not active"
+  service:
+    name: "{{ item }}"
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  with_items:
+    - "{{ php_fpm_service }}"
+  when: php_fpm_active_status != "active"
+
+# --- ~ ---
+

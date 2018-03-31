@@ -1,0 +1,26 @@
+# --
+
+- name: "Install nginx and dependencies (php-fpm)"
+  apt:
+    pkg: "{{ item }}"
+    update-cache: yes
+    autoremove: yes
+    state: latest
+  with_items:
+    - php-fpm
+    - nginx
+
+# ---
+
+- name: "Remove default site"
+  file:
+    path: "{{ item }}"
+    state: absent
+    force: yes
+  with_items:
+    - "/etc/nginx/sites-available/default"
+    - "/etc/nginx/sites-enabled/default"
+
+# --- ~ ---
+
+

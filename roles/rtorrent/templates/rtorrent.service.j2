@@ -1,0 +1,23 @@
+[Unit]
+Description=rtorrent (ruTorrent backend)
+After=network.target
+
+[Service]
+Type=simple
+User={{ usr }}
+Group={{ usr }}
+WorkingDirectory={{ home }}
+PIDFile={{ pid_file }}
+
+ExecStart={{ rtorrent_exec }}
+Restart=always
+RestartSec=90
+StartLimitInterval=400
+StartLimitBurst=3
+
+StandardInput=tty-force
+TTYPath=/dev/tty30
+
+[Install]
+WantedBy=multi-user.target
+

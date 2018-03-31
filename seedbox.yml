@@ -1,0 +1,28 @@
+- hosts: seedbox
+  any_errors_fatal: true
+  remote_user: octav
+#  su: yes
+#  su_user: root
+  become: yes
+  become_method: su
+#  become_user: root
+  vars:
+# -- rtorrent
+    usr: "rtorrent"
+    home: "/home/{{ usr }}"
+    download_dir: "downloaded"
+    watch_dir: "torrents"
+    rtorrent_rpc: "/tmp/rtorrent.rpc"
+    pid_file: "/var/run/rtorrent.pid"
+    rtorrent_exec: "/usr/bin/rtorrent"
+# -- nginx
+    php_fpm_service: "php7.0-fpm.service"
+# -- rutorrent
+#   username: octav
+#   password: OpelAstra1.
+    rutorrent_path: "{{ home }}/webui/rutorrent"
+    rutorrent_repo_url: "https://github.com/Novik/ruTorrent"
+    rutorrent_repo_rev: "v3.8"
+  roles:
+    - rutorrent
+#     ^ includes rtorrent
